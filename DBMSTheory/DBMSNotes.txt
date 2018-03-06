@@ -1,0 +1,211 @@
+SELECT balance
+FROM Accounts
+WHERE accountNo=67890;
+
+SELECT accountNo
+FROM Accounts
+WHERE type='savings' AND balance<0;
+
+##第一章
+
+关系就是表，就是记录的集合。
+关系名和其属性集合的组合称为这个关系的模式(schema)。
+关系是元组的集合(无序、不重复)。
+一个给定关系中元组的集合叫做关系的实例(instance)
+关系模式的属性是集合(无序、不重复)。
+数据库的关系模式集合叫做关系数据库模式，或数据库模式。
+关系模型要求元组的每个分量具有原子性。也就是说，必须属于某种元素类型，如integer或string，而不能是记录、集合、列表、数组或其他可以被分解成更小分量的组合类型。
+属性的元素类型称为域。如Movies中四个分量对应的域分别是string、integer、integer、string
+关系模式的描述：Movies(title:string,year:integer,length:integer,genre:string),通常的约定是，关系名以大写字母开头，属性名以小写字母开头。
+元组的描述：(Gone With the Wind,1939,231,drama)
+
+存储管理程序包括两个部分——缓冲区管理程序和文件管理程序
+
+回答查询所需的步骤越少,查询方案就越好
+
+通常开销大的步骤是存储管理程序把磁盘数据块复制到缓冲池的内存页面或由内存页面写回磁盘
+
+事务,非正式地讲,是一组按顺序执行的操作单位，是数据库的基本工作单元。
+
+事务的ACID的特性：
+A(Atomicity)-原子性：整个事务或者都执行或者都不执行；
+C(Consistency)-一致性：一个座位不能分配给两个不同的顾客；
+I(Isolation)-隔离性：当两个或更多的事务并发运行时, 它们的作用效果必须互相分开。如果由于并发操作导致同一座位卖了两次或根本没卖, 都是不能接受的；
+D(Durability)-持久性：如果事务已经完成,即使系统出现故障,甚至事务刚刚完成,就出现了系统故障,事务的结果也不能丢失。
+
+日志总是直接写到磁盘。记录所有的操作是保证持久性的重要手段。
+
+事务提交过程：先把更新的内容复制到日志记录中，然后再把更新的内容写入数据库本身。
+
+未来的数据库系统：面向对象、约束和触发程序、多媒体数据、数据集成。
+
+数据库管理系统的主要组成部分：查询处理程序、事务管理程序、存储管理程序。
+
+查询管理程序的一个重要任务是“优化”查询，为给定的查询寻找好的解答算法。
+
+##第二章
+
+反向联系(inverse)：作为通用的规则,如果类C的联系R把一个或多个对象y1,y2,…,yn的集合和类C的对象x相连,那么R的反向联系就把对象x(可能还有其他的对象)和每个yi相连。
+
+我们希望如果影星S在电影M的影星集stars中,那么电影M就在影星S的starredIn集合中。我们通过将关键字inverse和另一个联系的名字放在每个联系的说明中来表示stars和starredIn两个联系之间的这种关联机制。
+
+Star::starredIn 为Star类的名为starredIn的特性(此处为联系)的引用
+
+联系及其反向联系的唯一性要求称为联系的多重性。三种最常见的多重性是：
+(1)从类C到类D的多对多联系是指,在联系中,每个C都和D的集合有关,而在反向联系中,每个D都和C的集合有关。在每个方向上,都允许集合为空。stars是从类Movie到类Star的多对多联系,而starredIn是从Star到Movie的多对多联系。
+(2)从类C到类D的一对多联系是指,在联系中,每个C都和唯一的D有关, 而在反向联系中,每个D都和C的集合有关。ownedBy是从Movie到Studio的多对一的联系。
+(3)从类C到类D的一对一联系是指,在联系中,每个C都和唯一的D有关,而在反向联系中,每个D都和唯一的C有关。
+
+
+
+interface Movie{
+	attribute string title;
+	attribute integer year;
+	attribute integer length;
+	attribute enum Film{color,blackAndWhite} fileType;
+	relationship Set<Star> stars			//Movie与star联系 stars是从Movie到Star的多对多联系(在联系中每个Movie都和Star集合有关，在反向联系中每个Star都和Movie的集合有关,所以从Movie到Star是多对多 画图好理解)
+		inverse Star::starredIn;		//与Star的starredIn联系建立反向联系
+	relationship Studio ownedBy			//Movie与Studio联系 ownedBy是从Movie到Studio多对一联系(在联系中每个Movie都和唯一的Studio有关,在反向联系中每个Studio都和Movie的集合有关,所以从Movie到Studio是多对一)
+		inverse Studio::owns;			//与Movie的owns联系建立反向联系
+};
+interface Star{
+	attribute string name;
+	attribute Struct Addr {string street,string city} address;
+	relationship Set<Movie> starredIn		//与Movie联系 starredIn是从Star到Movie的多对多联系(在联系中每个Star都和Movie集合有关,在反向联系中每个Movie都和Star集合有关,所以从Star到Movie是多对多)
+		inverse Movie::stars;			//与Movie的stars联系建立反向联系
+};
+interface Studio{
+	attribute string name;
+	attribute string address;
+	relationship Set<Moive> owns			//与Movie联系 owns是从Studio到Movie的一对多联系(在联系中每个Studio都和Movie集合有关,在反向联系中每个Movie都和唯一的Studio有关,所以从Studio到Movie是一对多)
+		inverse Movie::ownedBy;			//与Movie的ownedBy联系建立反向联系
+};
+
+作为抽象的设计语言,ODL要求有反向联系。对这个要求的解释是,每当有一个路径从一个对象出发到它的相关对象时(例如从电影对象出发到影星对象),相反方向上的路径(从影星到他们主演的电影)也是可能的。也就是说,如果有一个影星Charltion Heston,我们可以审查所有的电影对象并且检查它们的影星。然后我们可以列出由Heston主演的电影。ODL要求给这个反向的过程赋予一个联系名。然而,当我们将ODL转换成实际的编程语言(例如嵌入式的C++语言)的说明时,我们知道将引用只放入电影对象中,而在影星对象中没有对电影的引用是可能的。于是,ODL的嵌入式C++允许单向联系。因为我们在这里只关心设计,而不是实现,我们将期望每个联系都有反向联系。
+
+集合：无序、不重复；
+包  ：无序、可重复；
+列表：有序、可重复。
+
+ODL基本类型：原子类型、接口类型
+	     原子类型：整型、浮点型、字符、字符串、布尔型、枚举型
+	     接口类型：实际上表示结构类型, 由属性和该接口的联系所对应的各种分量组成
+
+ODL结构类型：集合、包、列表、数组、结构
+其中集合、包、列表、数组统称为聚集类型
+
+属性的类型首先由原子类型或者域是原子类型的结构组成。然后我们可以随意地把聚集类型应用于原始的原子类型或结构。
+联系的类型是接口类型或者是应用于接口类型的聚集类型。
+属性的类型不能是接口类型, 而联系的类型不能是原子类型, 记住这些是很重要的。正是这个差别区分了属性和联系。还要注意,复杂类型构成属性和联系的方式有所不同。属性和联系都允许用任选的聚集类型作为最终的运算符,但是只有属性允许结构类型。
+
+半结构化模型(最主要的体现就是XML)
+<Movies>
+	<Movie tilte="Gone With the Wind">
+		<Year>1939</Year>
+		<Length>231</Length>
+		<Genre>drama</Genre>
+	</Movie>
+	<Movie tilte="Star Wars">
+		<Year>1977</Year>
+		<Length>124</Length>
+		<Genre>sciFi</Genre>
+	</Movie>
+	<Movie tilte="Wayne's World">
+		<Year>1992</Year>
+		<Length>95</Length>
+		<Genre>comedy</Genre>
+	</Movie>
+</Movies>
+
+通常在形成键的属性或属性组下面画上下划线用来表示它是键的组成部分。
+Movies(title,year,length,genre)
+
+CHAR类型会以一些短的字符串来填充后面为填满的空间
+VARCHAR类型会使用一个结束符或字符长度值来标志字符串的结束，后面未填满的空间不会做填充
+BIT(n)表示长为n的位串
+BIT VAYING(n)表示最大长度为n的位串
+BOOLEAN的值：TRUE、FALSE、UNKNOWN
+SQL中字符串是使用单引号！
+DATE '1948-05-14'
+TIME '13:00:02.5'
+INT=INTEGER
+FLOAT=REAL
+DOUBLE PRECISION
+DECIMAL(6,2)    (0123.45)
+
+CREATE TABLE Movies(
+	title CHAR(100),
+	year INT,
+	length INT,
+	genre CHAR(10),
+	studioName CHAR(30),
+	producerC# INT
+);
+CREATE TABLE MovieStar(
+	name CHAR(30),
+	address VARCHAR(255),
+	gender CHAR(1),
+	birthdate DATE
+);
+CREATE TABLE MovieStar(
+	name CHAR(30),
+	address VARCHAR(255),
+	gender CHAR(1) DEFAULT '?',//设置默认值
+	birthdate DATE DEFAULT DATE '0000-00-00'//设置默认值
+);
+删除关系
+DRAOP TABLE R;//删除数据库中的关系R
+
+修改关系以关键字ALTER TABLE开头,其后加上关系名字,后面还可以跟几种选项，最重要的两种是：(1)ADD后面加上属性名字和数据类型;(2)DROP后面加上属性名字
+ALTER TABLE MovieStar ADD phone CHAR(16);//修改关系MovieStar,增加属性phone
+ALTER TABLE MovieStar ADD phone CHAR(16) DEFAULT 'unlisted';//修改关系MovieStar,增加属性phone并为其设置默认值'unlisted'
+ALTER TABLE MovieStar DROP birthdate;//删除关系中的birthdate属性
+
+2种指明键的声明方法：
+(1)PRIMARY KEY  (不能为NULL)
+(2)UNIQUE	(允许为NULL)
+声明某组属性S为键，则不能在S的所有属性上具有完全相同的值，除非其中一个是NULL值。
+CREATE TABLE MovieStar(
+	name CHAR(30) PRIMARY KEY,//name主键声明
+	address VARCHAR(255),
+	gender CAHR(1),
+	birthdate DATE
+);
+CREATE TABLE MovieStar(
+	name CHAR(30),
+	address VARCHAR(255),
+	gender CHAR(1),
+	birthdate DATE,
+	PRIMARY KEY (name)//独立的主键声明
+);
+当键由多个属性组成时，必须使用独立的键声明
+CREATE TABLE Movies(
+	title CHAR(100),
+	year INT,
+	length INT,
+	genre CHAR(10),
+	studioName CHAR(30),
+	producerC# INT,
+	PRIMARY KEY (title,year)
+);
+
+投影(projection)操作用来从关系R生成一个新的关系，这个关系只包含原来关系R中的部分列，投影后的新关系中相同的元组会排除。
+
+在一个连接当中，如果一个元组不能和另外关系中的任何一个元组配对的话，这个元组就被称为悬浮元组(dangling tuple)。
+
+自然连接：关系模式有相同的属性且属性值相同，一个元组可以与另外几个元组连接。自然连接后的关系相同的属性合并。
+θ连接：关系模式中相同的属性且属性值满足特定条件C，一个元组可以与另外几个元组连接。若条件C是'='，则θ连接后的相同属性合并，否则以U.B和V.B加以区分。
+
+关系代数
+关系代数表达式
+关系代数表达式树
+用线性符号表示关系代数表达式
+
+一个包含键的属性集叫超键(superkey),即键的超集(在该集合中，除了有键的属性外还可以有键的以外的属性)。
+每个键都是超键，但某些键不是(最小化)的键(因为可能有非键的属性)。
+
+平凡FD：A1,A2,...,An → B1,B2,...,Bn 其中{B1,B2,...,Bn}包含于{A1,A2,...,An},即平凡FD的右边是左边的子集(由大的推小的显然成立，很普通，很平凡)
+
+假设{A1,A2,...,An}是属性集合，S是FD的集合，若A1,A2,...,An → B能由满足S中的所有的FD推断出来，则B就称为属性集合{A1,A2,...,An}的闭包，记作{A1,A2,...,An}+
+
+计算闭包的方法：从一个给定的属性集合出发，只要某个FD左边的属性全部包含在这个集合中，就把此FD右边的属性也包含进去，反复使用这个方法，直到不在产生新的属性为止，最后的结果集合就是给定属性集合的闭包。
